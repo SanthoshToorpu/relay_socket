@@ -30,10 +30,16 @@ wss.on("connection", (client) => {
 
 	// Relay messages from backend → browser
 	backendWS.on("message", (msg) => {
-		if (client.readyState === WebSocket.OPEN) {
-			client.send(msg.toString())
-		}
-	})
+  try {
+    const text = msg.toString(); // ensure it's a string
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(text);
+    }
+  } catch (err) {
+    console.error("❌ Relay parse error:", err);
+  }
+});
+
 
 	client.on("close", () => backendWS.close())
 	backendWS.on("close", () => client.close())
