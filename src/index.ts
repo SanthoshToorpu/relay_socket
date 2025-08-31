@@ -1,35 +1,41 @@
 import { heartbeat, keepAlive } from "./utils/keepalive.js"
-import { ask } from "./utils/log.js"
-import {
-	broadcastMessage,
-	chooseNickname,
-	chooseRoom,
-	close,
-} from "./utils/message.js"
-import { Socket, newState } from "./utils/state.js"
 import { WebSocketServer } from "ws"
+import WebSocket from "ws"
+
+const CLUSTER_WS_URL = process.env.CLUSTER_WS_URL || "wss://129.80.218.9.nip.io/ws/agent"
+const BEARER_TOKEN = process.env.BEARER_TOKEN || "<your_service_account_token>"
 
 const wss = new WebSocketServer({ port: Number(process.env.PORT) })
 
-wss.on("connection", (ws: Socket) => {
-	const state = newState(ws)
-	ask(ws, "Room Code")
+wss.on("connection", (client) => {
+	console.log("🌐 Browser connected to relay")
 
-	ws.on("message", (data) => {
-		const message = data.toString()
+	// Connect to your cluster WS with Authorization header
+	const backendWS = new WebSocket(CLUSTER_WS_URL, {
+		headers: { Authorization: `Bearer ${BEARER_TOKEN}` },
+		rejectUnauthorized: false // 🚨 remove once you have valid SSL
+	})
 
-		switch (state.status) {
-			case "ROOM":
-				return chooseRoom(message, state)
-			case "NICKNAME":
-				return chooseNickname(message, state)
-			default:
-				return broadcastMessage(message, state)
+	backendWS.on("open", () => console.log("✅ Relay connected to cluster WS"))
+
+	// Relay messages from browser → backend
+	client.on("message", (msg) => {
+		if (backendWS.readyState === WebSocket.OPEN) {
+			backendWS.send(msg)
 		}
 	})
 
-	ws.on("pong", heartbeat)
-	ws.on("close", () => close(state))
+	// Relay messages from backend → browser
+	backendWS.on("message", (msg) => {
+		if (client.readyState === WebSocket.OPEN) {
+			client.send(msg.toString())
+		}
+	})
+
+	client.on("close", () => backendWS.close())
+	backendWS.on("close", () => client.close())
+
+	client.on("pong", heartbeat)
 })
 
 const interval = keepAlive(wss)
