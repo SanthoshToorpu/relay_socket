@@ -5,6 +5,9 @@ import WebSocket from "ws"
 const CLUSTER_WS_URL = process.env.CLUSTER_WS_URL || "wss://129.80.218.9.nip.io/ws/agent"
 const BEARER_TOKEN = process.env.BEARER_TOKEN || "<your_service_account_token>"
 
+console.log("CLUSTER_WS_URL =", JSON.stringify(process.env.CLUSTER_WS_URL));
+console.log("BEARER_TOKEN =", process.env.BEARER_TOKEN ? "<set>" : "<missing>");
+
 const wss = new WebSocketServer({ port: Number(process.env.PORT) })
 
 wss.on("connection", (client) => {
