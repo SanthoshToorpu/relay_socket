@@ -30,6 +30,7 @@ wss.on("connection", (client) => {
 
 	// Relay messages from backend → browser
 	backendWS.on("message", (msg, isBinary) => {
+		console.log("backend sent :", msg)
   try {
     // Ensure it's a string (decode bytes if needed)
     const text = isBinary ? msg.toString() : msg.toString();
