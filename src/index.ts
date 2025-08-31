@@ -29,16 +29,28 @@ wss.on("connection", (client) => {
 	})
 
 	// Relay messages from backend → browser
-	backendWS.on("message", (msg) => {
+	backendWS.on("message", (msg, isBinary) => {
   try {
-    const text = msg.toString(); // ensure it's a string
+    // Ensure it's a string (decode bytes if needed)
+    const text = isBinary ? msg.toString() : msg.toString();
+
+    // Try to parse as JSON
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      // Not valid JSON → just wrap as content
+      payload = { type: "raw", content: text };
+    }
+
     if (client.readyState === WebSocket.OPEN) {
-      client.send(text);
+      client.send(JSON.stringify(payload));
     }
   } catch (err) {
-    console.error("❌ Relay parse error:", err);
+    console.error("❌ Relay error:", err);
   }
 });
+
 
 
 	client.on("close", () => backendWS.close())
